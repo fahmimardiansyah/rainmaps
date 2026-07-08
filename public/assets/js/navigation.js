@@ -57,24 +57,36 @@ legendToggle.addEventListener("click", (e) => {
 // Rain Alert Toggle Logic
 let alertMinimized = false;
 function toggleAlert() {
+
     const alert = document.getElementById("rain-alert");
+
+    if (!alert) return;
+
     const text = alert.querySelector(".alert-text");
     const close = alert.querySelector(".alert-close");
     const icon = document.getElementById("alert-icon");
 
     if (!alertMinimized) {
+
         alert.classList.add("alert-minimized");
-        text.style.display = "none";
-        close.style.display = "none";
-        icon.innerHTML = "warning";
+
+        if (text) text.style.display = "none";
+        if (close) close.style.display = "none";
+        if (icon) icon.textContent = "warning";
+
         alertMinimized = true;
+
     } else {
+
         alert.classList.remove("alert-minimized");
-        text.style.display = "block";
-        close.style.display = "block";
-        icon.innerHTML = "cloudy_snowing";
+
+        if (text) text.style.display = "";
+        if (close) close.style.display = "";
+        if (icon) icon.textContent = "cloudy_snowing";
+
         alertMinimized = false;
     }
+
 }
 
 const etaPanel = document.getElementById("eta-panel");
