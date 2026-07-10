@@ -35,11 +35,40 @@
     @stack('scripts')
 
     @if (View::hasSection('google-maps'))
-        <script src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.api_key') }}&libraries=places,marker,geometry&callback=initMap"
+        <script
+            src="https://maps.googleapis.com/maps/api/js?key={{ config('services.google_maps.api_key') }}&libraries=places,marker,geometry&callback=initMap"
             async defer></script>
     @endif
 
     <script type="text/javascript" src="https://api.useberry.com/integrations/liveUrl/scripts/useberryScript.js"></script>
+    <script>
+        (function(m, a, z, e) {
+            var s, t, u, v;
+            try {
+                t = m.sessionStorage.getItem('maze-us');
+            } catch (err) {}
+
+            if (!t) {
+                t = new Date().getTime();
+                try {
+                    m.sessionStorage.setItem('maze-us', t);
+                } catch (err) {}
+            }
+
+            u = document.currentScript || (function() {
+                var w = document.getElementsByTagName('script');
+                return w[w.length - 1];
+            })();
+            v = u && u.nonce;
+
+            s = a.createElement('script');
+            s.src = z + '?apiKey=' + e;
+            s.async = true;
+            if (v) s.setAttribute('nonce', v);
+            a.getElementsByTagName('head')[0].appendChild(s);
+            m.mazeUniversalSnippetApiKey = e;
+        })(window, document, 'https://snippet.maze.co/maze-universal-loader.js', '5015c377-5fb4-4e3d-9c35-db26f531486b');
+    </script>
 
 </body>
 
