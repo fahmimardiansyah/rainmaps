@@ -57,36 +57,24 @@ legendToggle.addEventListener("click", (e) => {
 // Rain Alert Toggle Logic
 let alertMinimized = false;
 function toggleAlert() {
-
     const alert = document.getElementById("rain-alert");
-
-    if (!alert) return;
-
     const text = alert.querySelector(".alert-text");
     const close = alert.querySelector(".alert-close");
     const icon = document.getElementById("alert-icon");
 
     if (!alertMinimized) {
-
         alert.classList.add("alert-minimized");
-
-        if (text) text.style.display = "none";
-        if (close) close.style.display = "none";
-        if (icon) icon.textContent = "warning";
-
+        text.style.display = "none";
+        close.style.display = "none";
+        icon.innerHTML = "warning";
         alertMinimized = true;
-
     } else {
-
         alert.classList.remove("alert-minimized");
-
-        if (text) text.style.display = "";
-        if (close) close.style.display = "";
-        if (icon) icon.textContent = "cloudy_snowing";
-
+        text.style.display = "block";
+        close.style.display = "block";
+        icon.innerHTML = "cloudy_snowing";
         alertMinimized = false;
     }
-
 }
 
 const etaPanel = document.getElementById("eta-panel");
@@ -732,7 +720,12 @@ function createDriftingHeatmapOverlay(bounds, imageUrl) {
 }
 
 function loadHeatmapOverlay() {
-    const image = "/assets/images/rainfall_heatmap.png";
+    // Bounds seluas Jawa Timur (SAMA seperti gambar rainfall_heatmap.png
+    // yang dipakai -- gambar ini sudah di-generate supaya titik panas
+    // (merah) jatuh presisi di Malang, Surabaya, dan Sidoarjo untuk bounds
+    // ini secara spesifik. Jangan ubah angka bounds ini tanpa generate
+    // ulang gambarnya, karena posisinya saling terkait.
+    const image = "/assets/images/rainfall.png";
 
     const bounds = new google.maps.LatLngBounds(
         { lat: -8.9, lng: 111.0 }, // south-west

@@ -25,17 +25,18 @@ if (sheet && handle) {
         sheetState = newState;
     }
 
-    handle.addEventListener("touchstart", (e) => {
-        startY = e.touches[0].clientY;
+    handle.addEventListener("pointerdown", (e) => {
+        startY = e.clientY;
         isDragging = true;
         sheet.style.transition = "none";
         startTranslate = sheetState === "expanded" ? 0 : 320;
+        handle.setPointerCapture(e.pointerId);
     });
 
-    document.addEventListener("touchmove", (e) => {
+    document.addEventListener("pointermove", (e) => {
         if (!isDragging) return;
 
-        currentY = e.touches[0].clientY;
+        currentY = e.clientY;
         const delta = currentY - startY;
 
         currentTranslate = startTranslate + delta;
@@ -45,13 +46,13 @@ if (sheet && handle) {
         sheet.style.transform = `translateY(${currentTranslate}px)`;
     });
 
-    document.addEventListener("touchend", (e) => {
+    document.addEventListener("pointerup", (e) => {
         if (!isDragging) return;
 
         isDragging = false;
         sheet.style.transition = "transform .28s ease";
 
-        const endY = e.changedTouches[0].clientY;
+        const endY = e.clientY;
         const diff = endY - startY;
 
         if (Math.abs(diff) > 40) {

@@ -36,6 +36,7 @@ body {
     transform: translateY(15vh);
 }
 
+
 /* DESTINATION PAGE */
 .material-symbols-outlined {
     font-variation-settings:
@@ -83,6 +84,8 @@ body {
 .sheet-expanded {
     transform: translateY(10%);
 }
+
+
 
 /* NAVIGATION PAGE */
 body {
@@ -160,6 +163,18 @@ body {
     position: absolute;
     overflow: hidden;
     pointer-events: none;
+    /* Fade lembut di tepi supaya batas bounds heatmap tidak kelihatan
+       sebagai garis kotak tegas -- menyatu halus ke peta di sekitarnya. */
+    -webkit-mask-image: radial-gradient(
+        ellipse at center,
+        black 45%,
+        transparent 78%
+    );
+    mask-image: radial-gradient(
+        ellipse at center,
+        black 45%,
+        transparent 78%
+    );
 }
 .heatmap-drift-img {
     display: block;
@@ -171,21 +186,11 @@ body {
     will-change: transform;
 }
 @keyframes heatmapDrift {
-    0% {
-        transform: scale(1.12) translate(0%, 0%);
-    }
-    25% {
-        transform: scale(1.12) translate(1.5%, -1%);
-    }
-    50% {
-        transform: scale(1.12) translate(-1%, 1.5%);
-    }
-    75% {
-        transform: scale(1.12) translate(1%, 1%);
-    }
-    100% {
-        transform: scale(1.12) translate(0%, 0%);
-    }
+    0%   { transform: scale(1.12) translate(0%, 0%); }
+    25%  { transform: scale(1.12) translate(1.5%, -1%); }
+    50%  { transform: scale(1.12) translate(-1%, 1.5%); }
+    75%  { transform: scale(1.12) translate(1%, 1%); }
+    100% { transform: scale(1.12) translate(0%, 0%); }
 }
 
 /* Rain Alert Transitions */
@@ -201,110 +206,132 @@ body {
     left: none !important;
 }
 
-#eta-panel {
+#eta-panel{
+
     transition:
-        max-height 0.3s ease,
-        padding 0.3s ease;
+    max-height .3s ease,
+    padding .3s ease;
+
 }
 
-.eta-collapsed {
-    max-height: 24px;
+.eta-collapsed{
+
+    max-height:24px;
+
 }
 
-.eta-expanded {
-    max-height: 220px;
+.eta-expanded{
+
+    max-height:220px;
+
 }
 
-#map {
-    position: absolute;
+#map{
 
-    inset: 0;
+    position:absolute;
 
-    width: 100%;
+    inset:0;
 
-    height: 100%;
+    width:100%;
+
+    height:100%;
+
 }
 
-.weather-marker {
-    pointer-events: none;
+.weather-marker{
 
-    display: flex;
+    pointer-events:none;
 
-    flex-direction: column;
+    display:flex;
 
-    align-items: center;
+    flex-direction:column;
 
-    z-index: 50;
+    align-items:center;
+
+    z-index:50;
+
 }
 
 .weather-marker-card {
     min-width: 48px;
     padding: 6px 8px;
-    border-radius: 30px;
+    border-radius: 24px; 
+    
+    /* 1. Tentukan ketebalan stroke di sini (misal: 2px) */
+    border: 3px solid transparent; 
+    
+    /* 2. Ubah arah gradasi menjadi 'to right' (kiri ke kanan) */
+    background-image: 
+        linear-gradient(#1F1F1F, #1F1F1F), 
+        linear-gradient(to right, #8DDA21, #0185FA); /* Contoh: Gradasi Biru */
+    
+    /* 3. Kliping background agar gradasi hanya muncul pada garis tepi */
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+    
     color: white;
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 2px;
     box-shadow: 0 4px 12px rgba(0,0,0,.25);
-
-    /* --- Tambahan Kode Border Gradasi Kiri ke Kanan --- */
-    border: 3px solid transparent; /* Atur ketebalan outline di sini */
-    background-clip: padding-box, border-box;
-    background-origin: padding-box, border-box;
-    background-image: 
-        linear-gradient(#1F1F1F, #1F1F1F), /* Background asli kartu Anda */
-        linear-gradient(to right, #8DDA21, #0185FA); /* Warna gradasi outline */
 }
+
 
 /* Stem sekarang elemen nyata (in-flow), bukan pseudo-element overflow.
    Ini penting supaya AdvancedMarkerElement menghitung tinggi stem+dot
    sebagai bagian dari bounding box saat menentukan anchor point (bottom
    center), sehingga dot tetap presisi menempel di titik polyline. */
-.weather-marker-stem {
-    position: relative;
+.weather-marker-stem{
 
-    width: 8px;
+    position:relative;
 
-    height: 16px;
+    width:8px;
+
+    height:16px;
+
 }
 
-.weather-marker-stem::before {
-    content: "";
+.weather-marker-stem::before{
 
-    position: absolute;
+    content:"";
 
-    top: 0;
+    position:absolute;
 
-    left: 50%;
+    top:0;
 
-    transform: translateX(-50%);
+    left:50%;
 
-    width: 2px;
+    transform:translateX(-50%);
 
-    height: 8px;
+    width:2px;
 
-    background: #2196f3;
+    height:8px;
+
+    background:#2196F3;
+
 }
 
-.weather-marker-stem::after {
-    content: "";
+.weather-marker-stem::after{
 
-    position: absolute;
+    content:"";
 
-    bottom: 0;
+    position:absolute;
 
-    left: 50%;
+    bottom:0;
 
-    transform: translateX(-50%);
+    left:50%;
 
-    width: 8px;
+    transform:translateX(-50%);
 
-    height: 8px;
+    width:8px;
 
-    border-radius: 999px;
+    height:8px;
 
-    background: white;
+    border-radius:999px;
 
-    border: 2px solid #2196f3;
+    background:white;
+
+    border:2px solid #2196F3;
+
 }
