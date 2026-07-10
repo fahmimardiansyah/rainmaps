@@ -39,6 +39,8 @@
             async defer></script>
     @endif
 
+    <script type="text/javascript" src="https://api.useberry.com/integrations/liveUrl/scripts/useberryScript.js"></script>
+
 </body>
 
 </html>
