@@ -69,6 +69,7 @@
             m.mazeUniversalSnippetApiKey = e;
         })(window, document, 'https://snippet.maze.co/maze-universal-loader.js', '5015c377-5fb4-4e3d-9c35-db26f531486b');
     </script>
+    <script src="https://t.contentsquare.net/uxa/3ce48ad7613da.js" defer></script>
 
 </body>
 
