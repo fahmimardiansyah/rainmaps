@@ -725,7 +725,7 @@ function loadHeatmapOverlay() {
     // (merah) jatuh presisi di Malang, Surabaya, dan Sidoarjo untuk bounds
     // ini secara spesifik. Jangan ubah angka bounds ini tanpa generate
     // ulang gambarnya, karena posisinya saling terkait.
-    const image = "/assets/images/rainfall.png";
+    const image = "/assets/images/rainfalls.png";
 
     const bounds = new google.maps.LatLngBounds(
         { lat: -8.9, lng: 111.0 }, // south-west
