@@ -58,7 +58,7 @@ legendToggle.addEventListener("click", (e) => {
 let alertMinimized = false;
 function toggleAlert() {
     const alert = document.getElementById("rain-alert");
-    const text = alert.querySelector(".alert-text");
+    const text = alert.querySelector("#alert-text");
     const close = alert.querySelector(".alert-close");
     const icon = document.getElementById("alert-icon");
 
