@@ -67,7 +67,7 @@
             if (v) s.setAttribute('nonce', v);
             a.getElementsByTagName('head')[0].appendChild(s);
             m.mazeUniversalSnippetApiKey = e;
-        })(window, document, 'https://snippet.maze.co/maze-universal-loader.js', '5015c377-5fb4-4e3d-9c35-db26f531486b');
+        })(window, document, 'https://snippet.maze.co/maze-universal-loader.js', '1d46ce3f-b165-4d8b-99ac-0e2f57826545');
     </script>
     <script src="https://t.contentsquare.net/uxa/3ce48ad7613da.js" defer></script>
 
