@@ -182,7 +182,7 @@ body {
     height: 100%;
     object-fit: cover;
     transform-origin: center center;
-    animation: heatmapDrift 20s ease-in-out infinite;
+    animation: heatmapDrift 50s ease-in-out infinite;
     will-change: transform;
 }
 @keyframes heatmapDrift {

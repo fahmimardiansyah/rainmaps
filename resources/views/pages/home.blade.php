@@ -3,7 +3,7 @@
 @section('google-maps')
 @endsection
 
-@section('title', 'Home')
+@section('title', 'Home - Weather Maps')
 
 @section('content')
 

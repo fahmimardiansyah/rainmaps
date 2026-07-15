@@ -18,6 +18,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@100..900&amp;display=swap"
         rel="stylesheet" />
 
+    <link rel="icon" href="{{ asset('assets/icons/weathermaps.ico') }}" type="image/x-icon">
+
     <link rel="stylesheet" href="{{ asset('assets/css/style.css') }}">
 
     @stack('styles')
