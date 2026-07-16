@@ -166,8 +166,8 @@
             </div>
             <!-- Rain Alert Banner -->
             <div id="rain-alert"
-                class="bg-gradient-nav rounded-xl p-3 flex items-center gap-4 text-white shadow-md animate-pulse duration-[3000ms]">
-                <div class="bg-white/20 p-2 rounded-lg">
+                class="bg-gradient-nav rounded-3xl p-3 flex items-center gap-4 text-white shadow-md animate-pulse duration-[3000ms]">
+                <div class="p-2 rounded-lg">
                     <span id="rain-alert-icon" class="material-symbols-outlined text-[24px]">cloudy_snowing</span>
                 </div>
                 <div>
