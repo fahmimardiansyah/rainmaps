@@ -90,7 +90,7 @@
                     <div class="text-white flex items-center justify-center shrink-0">
                         <span class="material-symbols-outlined !text-xl" id="alert-icon">cloudy_snowing</span>
                     </div>
-                    <span id="alert-text" class="font-label-bold text-white">Light rain ahead in 0.83 km</span>
+                    <span id="alert-text" class="font-label-bold text-white">Weather Alert On Your Route</span>
                 </div>
                 <button class="text-white/70 hover:text-white transition-colors alert-close"
                     onclick="
@@ -157,17 +157,17 @@
                         </div>
                         <div class="h-10 w-[1px] bg-outline-variant/30"></div>
                         <div class="flex flex-col items-center flex-1">
-                            <span id="nav-distance" class="font-display-time text-on-surface">1.2</span>
+                            <span id="nav-distance" class="font-display-time text-on-surface">-.-</span>
                             <span class="font-label-md text-on-surface-variant">km</span>
                         </div>
                         <div class="h-10 w-[1px] bg-outline-variant/30"></div>
                         <div class="flex flex-col items-center flex-1">
-                            <span id="nav-speed" class="font-display-time text-on-surface">40</span>
+                            <span id="nav-speed" class="font-display-time text-on-surface">--</span>
                             <span class="font-label-md text-on-surface-variant">km/h</span>
                         </div>
                         <div class="h-10 w-[1px] bg-outline-variant/30"></div>
                         <div class="flex flex-col items-center flex-1">
-                            <span id="nav-arrival-time" class="font-display-time text-primary">12:02</span>
+                            <span id="nav-arrival-time" class="font-display-time text-primary">--:--</span>
                             <span class="font-label-md text-primary font-bold">WIB</span>
                         </div>
                     </div>

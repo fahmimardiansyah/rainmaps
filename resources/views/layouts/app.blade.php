@@ -17,6 +17,8 @@
         rel="stylesheet" />
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@100..900&amp;display=swap"
         rel="stylesheet" />
+    
+    <link rel="stylesheet" href="{{ asset('assets/css/fonts.css') }}">
 
     <link rel="icon" href="{{ asset('assets/icons/weathermaps.ico') }}" type="image/x-icon">
 
@@ -32,7 +34,7 @@
 
     @yield('content')
 
-    <script src="{{ asset('assets/js/app.js') }}"></script>
+    {{-- <script src="{{ asset('assets/js/app.js') }}"></script> --}}
 
     @stack('scripts')
 
