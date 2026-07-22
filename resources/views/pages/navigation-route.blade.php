@@ -107,25 +107,60 @@
             <!-- Heatmap Legend Card (Full width matching ETA card) -->
             <div class="bg-white rounded-xl p-3 border border-outline-variant/30 shadow-lg w-full flex items-center justify-between overflow-hidden relative z-50 mb-2"
                 id="legend-panel"
+                data-legend-mode="heatmap"
                 onclick="
             if (this.classList.contains('legend-collapsed')) {
               document.getElementById('legend-toggle').click();
             }
           ">
                 <div class="flex flex-col flex-1" id="legend-full-content">
-                    <div class="flex items-center mb-1">
+                    <div class="flex items-center justify-between mb-2">
                         <span
                             class="font-label-bold text-on-surface-variant uppercase tracking-widest text-[10px]">Legend</span>
+                        <!-- Visualization Mode Toggle (Heatmap / Icon) -->
+                        <div class="flex items-center bg-surface-container-highest rounded-full p-0.5 gap-0.5"
+                            id="legend-mode-toggle">
+                            <button type="button" id="legend-mode-btn-heatmap"
+                                class="legend-mode-btn active w-7 h-7 rounded-full flex items-center justify-center bg-white shadow-sm transition-all">
+                                <span class="material-symbols-outlined !text-base text-primary">blur_on</span>
+                            </button>
+                            <button type="button" id="legend-mode-btn-icon"
+                                class="legend-mode-btn w-7 h-7 rounded-full flex items-center justify-center transition-all">
+                                <span class="material-symbols-outlined !text-base text-on-surface-variant">water_drop</span>
+                            </button>
+                        </div>
                     </div>
-                    <div
-                        class="h-2 w-full rounded-full bg-gradient-to-r from-primary-container via-secondary-fixed to-error mb-1">
+                    <!-- Heatmap Gradient View -->
+                    <div id="legend-heatmap-view">
+                        <div
+                            class="h-2 w-full rounded-full bg-gradient-to-r from-primary-container via-secondary-fixed to-error mb-1">
+                        </div>
+                        <div class="flex justify-between text-[9px] text-on-surface-variant/80 font-medium px-1">
+                            <span>Sangat Ringan</span>
+                            <span>Ringan</span>
+                            <span>Sedang</span>
+                            <span>Lebat</span>
+                            <span>Ekstrem</span>
+                        </div>
                     </div>
-                    <div class="flex justify-between text-[9px] text-on-surface-variant/80 font-medium px-1">
-                        <span>Sangat Ringan</span>
-                        <span>Ringan</span>
-                        <span>Sedang</span>
-                        <span>Lebat</span>
-                        <span>Ekstrem</span>
+                    <!-- Icon Category View (hidden by default) -->
+                    <div id="legend-icon-view" class="hidden flex-col gap-1.5">
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined !text-base text-on-surface-variant">cloud</span>
+                            <span class="text-[10px] text-on-surface-variant font-medium">Berawan</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined !text-base text-primary">water_drop</span>
+                            <span class="text-[10px] text-on-surface-variant font-medium">Hujan Ringan</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined !text-base text-tertiary-container">rainy</span>
+                            <span class="text-[10px] text-on-surface-variant font-medium">Hujan Deras</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="material-symbols-outlined !text-base text-error">thunderstorm</span>
+                            <span class="text-[10px] text-on-surface-variant font-medium">Hujan Lebat</span>
+                        </div>
                     </div>
                 </div>
                 <!-- Minimized vertical view (hidden by default) -->

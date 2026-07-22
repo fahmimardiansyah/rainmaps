@@ -24,6 +24,22 @@ let simulationIndex = 0;
 let simulationPath = [];
 let heatmapOverlay;
 
+//RAIN VISUALIZATION MODE (heatmap vs icon)
+let visualizationMode = "heatmap";
+let rainIconOverlay = null;
+let heatmapPixelData = null; // cache: canvas ctx + bounds untuk baca warna pixel rainfalls.png
+const RAIN_ICON_MIN_SPACING_METERS = 250; // jarak antar titik grid sampling (radius sebaran icon)
+
+// Bounds & url yang sama dipakai heatmap overlay MAUPUN pixel sampling icon,
+// biar dua-duanya selalu merujuk ke gambar & area yang identik.
+const RAINFALL_IMAGE_URL = "/assets/images/rainfalls.png";
+const RAINFALL_BOUNDS = {
+    south: -8.9,
+    west: 111.0,
+    north: -7.1,
+    east: 114.6,
+};
+
 const closeButton = document.getElementById("closeToDestination");
 const DEV_MODE = true;
 const relocateButton = document.getElementById("relocate-btn");
@@ -53,6 +69,85 @@ legendToggle.addEventListener("click", (e) => {
         minContent.classList.remove("hidden");
     }
 });
+
+// Visualization Mode Toggle Logic (Heatmap / Icon)
+const legendModeBtnHeatmap = document.getElementById("legend-mode-btn-heatmap");
+const legendModeBtnIcon = document.getElementById("legend-mode-btn-icon");
+
+if (legendModeBtnHeatmap && legendModeBtnIcon) {
+    legendModeBtnHeatmap.addEventListener("click", (e) => {
+        e.stopPropagation();
+        setVisualizationMode("heatmap");
+    });
+
+    legendModeBtnIcon.addEventListener("click", (e) => {
+        e.stopPropagation();
+        setVisualizationMode("icon");
+    });
+}
+
+function setVisualizationMode(mode) {
+    if (mode === visualizationMode) return;
+
+    visualizationMode = mode;
+    legendPanel.dataset.legendMode = mode;
+
+    const heatmapView = document.getElementById("legend-heatmap-view");
+    const iconView = document.getElementById("legend-icon-view");
+
+    const activeClasses = ["bg-white", "shadow-sm"];
+
+    if (mode === "heatmap") {
+        legendModeBtnHeatmap.classList.add(...activeClasses);
+        legendModeBtnHeatmap.querySelector("span").classList.replace(
+            "text-on-surface-variant",
+            "text-primary",
+        );
+
+        legendModeBtnIcon.classList.remove(...activeClasses);
+        legendModeBtnIcon.querySelector("span").classList.replace(
+            "text-primary",
+            "text-on-surface-variant",
+        );
+
+        heatmapView.classList.remove("hidden");
+        iconView.classList.add("hidden");
+    } else {
+        legendModeBtnIcon.classList.add(...activeClasses);
+        legendModeBtnIcon.querySelector("span").classList.replace(
+            "text-on-surface-variant",
+            "text-primary",
+        );
+
+        legendModeBtnHeatmap.classList.remove(...activeClasses);
+        legendModeBtnHeatmap.querySelector("span").classList.replace(
+            "text-primary",
+            "text-on-surface-variant",
+        );
+
+        heatmapView.classList.add("hidden");
+        iconView.classList.remove("hidden");
+    }
+
+    applyVisualizationModeToMap();
+}
+
+function applyVisualizationModeToMap() {
+    if (!map) return;
+
+    if (visualizationMode === "heatmap") {
+        if (heatmapOverlay) heatmapOverlay.setMap(map);
+        if (rainIconOverlay) rainIconOverlay.setMap(null);
+    } else {
+        if (heatmapOverlay) heatmapOverlay.setMap(null);
+
+        if (rainIconOverlay) {
+            rainIconOverlay.setMap(map);
+        } else {
+            loadRainIconMarkers();
+        }
+    }
+}
 
 // Rain Alert Toggle Logic
 let alertMinimized = false;
@@ -139,6 +234,10 @@ window.initMap = function () {
     map.addListener("zoom_changed", () => {
         followUser = false;
         toggleRelocateButton(true);
+    });
+
+    map.addListener("idle", () => {
+        scheduleRainIconRefresh();
     });
 
     directionsService = new google.maps.DirectionsService();
@@ -719,23 +818,298 @@ function createDriftingHeatmapOverlay(bounds, imageUrl) {
     return new DriftingHeatmapOverlay(bounds, imageUrl);
 }
 
+// ==============================
+// RAIN ICON VISUALIZATION
+// ==============================
+
+// Load gambar rainfalls.png ke canvas tersembunyi supaya kita bisa baca
+// warna pixel di titik lat/lng manapun -- tanpa nambah API call weather.
+function loadHeatmapPixelData() {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+
+    img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+
+        heatmapPixelData = {
+            ctx,
+            width: canvas.width,
+            height: canvas.height,
+        };
+
+        console.log("Heatmap pixel data ready:", canvas.width, canvas.height);
+    };
+
+    img.onerror = () => {
+        console.error("Gagal load rainfalls.png untuk pixel sampling");
+    };
+
+    img.src = RAINFALL_IMAGE_URL;
+}
+
+// Ambil warna RGB di titik lat/lng tertentu dari gambar rainfalls.png
+function getPixelColorAt(lat, lng) {
+    if (!heatmapPixelData) return null;
+
+    const { ctx, width, height } = heatmapPixelData;
+
+    const xRatio =
+        (lng - RAINFALL_BOUNDS.west) /
+        (RAINFALL_BOUNDS.east - RAINFALL_BOUNDS.west);
+    const yRatio =
+        (RAINFALL_BOUNDS.north - lat) /
+        (RAINFALL_BOUNDS.north - RAINFALL_BOUNDS.south);
+
+    if (xRatio < 0 || xRatio > 1 || yRatio < 0 || yRatio > 1) return null;
+
+    const px = Math.min(width - 1, Math.max(0, Math.floor(xRatio * width)));
+    const py = Math.min(height - 1, Math.max(0, Math.floor(yRatio * height)));
+
+    const [r, g, b, a] = ctx.getImageData(px, py, 1, 1).data;
+
+    return { r, g, b, a };
+}
+
+// Klasifikasi warna pixel jadi salah satu dari 4 kategori icon.
+// CATATAN: threshold hue di bawah ini estimasi awal berdasarkan skema warna
+// rainbow umum (biru/putih = ringan -> hijau/kuning -> merah = ekstrem).
+// Perlu di-kalibrasi ulang sambil lihat hasil asli di rainfalls.png --
+// tinggal geser angka HUE_THRESHOLDS di bawah, tidak perlu ubah logic lain.
+const HUE_THRESHOLDS = {
+    lightMax: 200, // biru/cyan -> Hujan Ringan
+    heavyMax: 90, // hijau/kuning -> Hujan Deras
+    // sisanya (oranye/merah) -> Hujan Lebat
+};
+const MIN_SATURATION_FOR_RAIN = 0.12; // di bawah ini dianggap "Berawan" (netral/putih)
+
+function classifyRainIntensity(rgb) {
+    if (!rgb || rgb.a < 20) return "clear"; // area transparan = tidak ada data
+
+    const { r, g, b } = rgb;
+    const max = Math.max(r, g, b) / 255;
+    const min = Math.min(r, g, b) / 255;
+    const lightness = (max + min) / 2;
+    const saturation =
+        max === min ? 0 : (max - min) / (1 - Math.abs(2 * lightness - 1));
+
+    // Nyaris putih/pucat di tepi gradient blur -> tidak perlu icon
+    if (saturation < MIN_SATURATION_FOR_RAIN || lightness > 0.92) {
+        return "clear";
+    }
+
+    let hue = 0;
+    const d = max - min;
+    if (d !== 0) {
+        switch (max) {
+            case r / 255:
+                hue = ((g / 255 - b / 255) / d) % 6;
+                break;
+            case g / 255:
+                hue = (b / 255 - r / 255) / d + 2;
+                break;
+            default:
+                hue = (r / 255 - g / 255) / d + 4;
+        }
+        hue = Math.round(hue * 60);
+        if (hue < 0) hue += 360;
+    }
+
+    if (hue >= HUE_THRESHOLDS.lightMax) return "light";
+    if (hue >= HUE_THRESHOLDS.heavyMax) return "heavy";
+    return "extreme";
+}
+
+// Konversi meter ke derajat lat/lng (dipakai buat spacing grid)
+function metersToDegreesLat(meters) {
+    return meters / 111320;
+}
+
+function metersToDegreesLng(meters, atLat) {
+    return meters / (111320 * Math.cos((atLat * Math.PI) / 180));
+}
+
+// Sample grid titik di SELURUH area map yang sedang terlihat (viewport),
+// bukan cuma di sepanjang rute -- supaya icon nyebar kayak di desain.
+// Grid dipotong (clip) ke RAINFALL_BOUNDS karena di luar itu tidak ada
+// data warna untuk dibaca.
+function sampleGridPointsForIcons() {
+    if (!map) return [];
+
+    const viewBounds = map.getBounds();
+    if (!viewBounds) return [];
+
+    const south = Math.max(viewBounds.getSouthWest().lat(), RAINFALL_BOUNDS.south);
+    const north = Math.min(viewBounds.getNorthEast().lat(), RAINFALL_BOUNDS.north);
+    const west = Math.max(viewBounds.getSouthWest().lng(), RAINFALL_BOUNDS.west);
+    const east = Math.min(viewBounds.getNorthEast().lng(), RAINFALL_BOUNDS.east);
+
+    if (south >= north || west >= east) return [];
+
+    const midLat = (south + north) / 2;
+    const latStep = metersToDegreesLat(RAIN_ICON_MIN_SPACING_METERS);
+    const lngStep = metersToDegreesLng(RAIN_ICON_MIN_SPACING_METERS, midLat);
+
+    const points = [];
+
+    for (let lat = south; lat <= north; lat += latStep) {
+        for (let lng = west; lng <= east; lng += lngStep) {
+            // Sedikit jitter acak supaya sebarannya kelihatan lebih organik,
+            // tidak kaku kayak grid sempurna
+            const jitterLat = (Math.random() - 0.5) * latStep * 0.4;
+            const jitterLng = (Math.random() - 0.5) * lngStep * 0.4;
+
+            points.push({ lat: lat + jitterLat, lng: lng + jitterLng });
+        }
+    }
+
+    return points;
+}
+
+const MAX_RAIN_ICON_MARKERS = 120; // batas aman biar performa map tetap ringan
+
+function loadRainIconMarkers() {
+    if (!heatmapPixelData) {
+        // Gambar belum selesai dimuat, coba lagi sebentar lagi
+        setTimeout(loadRainIconMarkers, 300);
+        return;
+    }
+
+    const points = sampleGridPointsForIcons();
+    const markers = [];
+
+    for (const point of points) {
+        if (markers.length >= MAX_RAIN_ICON_MARKERS) break;
+
+        const color = getPixelColorAt(point.lat, point.lng);
+        const category = classifyRainIntensity(color);
+
+        if (category === "clear") continue; // tidak perlu icon kalau cerah
+
+        markers.push({ lat: point.lat, lng: point.lng, category });
+    }
+
+    console.log(`Rain icon markers: ${markers.length} dari ${points.length} titik grid`);
+
+    if (rainIconOverlay) {
+        rainIconOverlay.setMap(null);
+    }
+
+    rainIconOverlay = createRainIconOverlay(markers);
+
+    if (visualizationMode === "icon") {
+        rainIconOverlay.setMap(map);
+    }
+}
+
+// Refresh marker (throttled) tiap kali user selesai pan/zoom map,
+// supaya sebaran icon selalu mengikuti area yang lagi dilihat.
+let rainIconRefreshTimeout = null;
+function scheduleRainIconRefresh() {
+    if (visualizationMode !== "icon") return;
+
+    clearTimeout(rainIconRefreshTimeout);
+    rainIconRefreshTimeout = setTimeout(loadRainIconMarkers, 400);
+}
+
+const RAIN_ICON_STYLE = {
+    light: { icon: "water_drop", color: "#0061a4" },
+    heavy: { icon: "rainy", color: "#db7900" },
+    extreme: { icon: "thunderstorm", color: "#ba1a1a" },
+};
+
+// Overlay custom (pola sama seperti DriftingHeatmapOverlay) yang render
+// semua marker icon rain sekaligus sebagai div HTML biasa -- supaya bisa
+// pakai font Material Symbols yang sudah dimuat di seluruh app, tanpa
+// perlu generate gambar/canvas per marker.
+function createRainIconOverlay(markers) {
+    class RainIconOverlay extends google.maps.OverlayView {
+        constructor(markers) {
+            super();
+            this.markers = markers;
+            this.container = null;
+        }
+
+        onAdd() {
+            this.container = document.createElement("div");
+            this.container.style.position = "absolute";
+
+            this.markers.forEach((m) => {
+                const style = RAIN_ICON_STYLE[m.category];
+
+                const el = document.createElement("div");
+                el.className =
+                    "rain-icon-marker absolute flex items-center justify-center rounded-full bg-white shadow-lg";
+                el.style.width = "32px";
+                el.style.height = "32px";
+                el.style.transform = "translate(-50%, -50%)";
+
+                const icon = document.createElement("span");
+                icon.className = "material-symbols-outlined !text-lg";
+                icon.style.color = style.color;
+                icon.textContent = style.icon;
+
+                el.appendChild(icon);
+                this.container.appendChild(el);
+                m._el = el;
+            });
+
+            this.getPanes().overlayLayer.appendChild(this.container);
+        }
+
+        draw() {
+            const projection = this.getProjection();
+            if (!projection) return;
+
+            this.markers.forEach((m) => {
+                const pos = projection.fromLatLngToDivPixel(
+                    new google.maps.LatLng(m.lat, m.lng),
+                );
+
+                if (!pos || !m._el) return;
+
+                m._el.style.left = `${pos.x}px`;
+                m._el.style.top = `${pos.y}px`;
+            });
+        }
+
+        onRemove() {
+            if (this.container) {
+                this.container.remove();
+                this.container = null;
+            }
+        }
+    }
+
+    return new RainIconOverlay(markers);
+}
+
 function loadHeatmapOverlay() {
     // Bounds seluas Jawa Timur (SAMA seperti gambar rainfall_heatmap.png
     // yang dipakai -- gambar ini sudah di-generate supaya titik panas
     // (merah) jatuh presisi di Malang, Surabaya, dan Sidoarjo untuk bounds
     // ini secara spesifik. Jangan ubah angka bounds ini tanpa generate
     // ulang gambarnya, karena posisinya saling terkait.
-    const image = "/assets/images/rainfalls.png";
-
     const bounds = new google.maps.LatLngBounds(
-        { lat: -8.9, lng: 111.0 }, // south-west
-        { lat: -7.1, lng: 114.6 }, // north-east
+        { lat: RAINFALL_BOUNDS.south, lng: RAINFALL_BOUNDS.west },
+        { lat: RAINFALL_BOUNDS.north, lng: RAINFALL_BOUNDS.east },
     );
 
     if (heatmapOverlay) {
         heatmapOverlay.setMap(null);
     }
 
-    heatmapOverlay = createDriftingHeatmapOverlay(bounds, image);
-    heatmapOverlay.setMap(map);
+    heatmapOverlay = createDriftingHeatmapOverlay(bounds, RAINFALL_IMAGE_URL);
+
+    if (visualizationMode === "heatmap") {
+        heatmapOverlay.setMap(map);
+    }
+
+    // Siapkan data pixel dari gambar yang sama untuk kebutuhan icon markers,
+    // supaya kedua mode visualisasi selalu merujuk ke sumber data yang identik.
+    loadHeatmapPixelData();
 }
