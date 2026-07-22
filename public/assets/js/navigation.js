@@ -28,7 +28,51 @@ let heatmapOverlay;
 let visualizationMode = "heatmap";
 let rainIconOverlay = null;
 let heatmapPixelData = null; // cache: canvas ctx + bounds untuk baca warna pixel rainfalls.png
-const RAIN_ICON_MIN_SPACING_METERS = 250; // jarak antar titik grid sampling (radius sebaran icon)
+const RAIN_ICON_MIN_SPACING_METERS = 250; // jarak antar titik grid sampling PADA ZOOM NORMAL (lihat ICON_ZOOM_MAX_DETAIL)
+const MAX_GRID_SAMPLES = 900; // batas keras jumlah titik grid mentah, berapa pun luas viewport (lihat sampleGridPointsForIcons)
+
+// --- Level of Detail icon berdasarkan zoom (biar tidak visual clutter) ---
+// Di zoom normal (>= ICON_ZOOM_MAX_DETAIL): kepadatan icon SAMA seperti
+// sebelumnya, tidak berubah.
+// Makin di-zoom out (mendekati/melewati ICON_ZOOM_MIN_DETAIL): jarak antar
+// icon makin renggang DAN jumlah maksimum icon yang ditampilkan makin
+// sedikit, sampai minimal ICON_MIN_MARKERS_AT_MIN_DETAIL titik saja yang
+// tersebar mewakili beberapa area sekaligus -- bukan lagi ratusan icon
+// berdempetan.
+const ICON_ZOOM_MAX_DETAIL = 15;
+const ICON_ZOOM_MIN_DETAIL = 6;
+const ICON_MAX_MARKERS_AT_MAX_DETAIL = 120;
+const ICON_MIN_MARKERS_AT_MIN_DETAIL = 5;
+
+// Spacing (meter) antar titik grid, disesuaikan level zoom -- makin zoom
+// out, spacing makin lebar (icon makin jarang & mewakili area lebih luas).
+function getIconSpacingMetersForZoom(zoom) {
+    if (zoom >= ICON_ZOOM_MAX_DETAIL) return RAIN_ICON_MIN_SPACING_METERS;
+
+    const zoomDiff =
+        ICON_ZOOM_MAX_DETAIL - Math.max(zoom, ICON_ZOOM_MIN_DETAIL);
+
+    // Tiap turun 1 level zoom, area yang terlihat kira-kira 2x lebih luas --
+    // spacing digandakan bertahap (faktor 1.7) supaya kepadatan visual di
+    // layar terasa makin ringkas, bukan makin padat.
+    return RAIN_ICON_MIN_SPACING_METERS * Math.pow(1.7, zoomDiff);
+}
+
+// Batas MAKSIMUM icon yang ditampilkan, disesuaikan level zoom -- makin
+// zoom out, makin sedikit icon yang ditampilkan (sampai minimal 5).
+function getMaxMarkersForZoom(zoom) {
+    if (zoom >= ICON_ZOOM_MAX_DETAIL) return ICON_MAX_MARKERS_AT_MAX_DETAIL;
+    if (zoom <= ICON_ZOOM_MIN_DETAIL) return ICON_MIN_MARKERS_AT_MIN_DETAIL;
+
+    const t =
+        (zoom - ICON_ZOOM_MIN_DETAIL) /
+        (ICON_ZOOM_MAX_DETAIL - ICON_ZOOM_MIN_DETAIL);
+
+    return Math.round(
+        ICON_MIN_MARKERS_AT_MIN_DETAIL +
+            t * (ICON_MAX_MARKERS_AT_MAX_DETAIL - ICON_MIN_MARKERS_AT_MIN_DETAIL),
+    );
+}
 
 // Bounds & url yang sama dipakai heatmap overlay MAUPUN pixel sampling icon,
 // biar dua-duanya selalu merujuk ke gambar & area yang identik.
@@ -951,8 +995,28 @@ function sampleGridPointsForIcons() {
     if (south >= north || west >= east) return [];
 
     const midLat = (south + north) / 2;
-    const latStep = metersToDegreesLat(RAIN_ICON_MIN_SPACING_METERS);
-    const lngStep = metersToDegreesLng(RAIN_ICON_MIN_SPACING_METERS, midLat);
+    const zoom = map.getZoom() ?? ICON_ZOOM_MAX_DETAIL;
+    const spacingMeters = getIconSpacingMetersForZoom(zoom);
+
+    let latStep = metersToDegreesLat(spacingMeters);
+    let lngStep = metersToDegreesLng(spacingMeters, midLat);
+
+    // Safety valve TAMBAHAN (di luar penyesuaian zoom di atas): kombinasi
+    // area sangat luas + zoom yang belum di-cover rentang ICON_ZOOM_* di
+    // atas tetap bisa menghasilkan titik grid sangat banyak. Supaya jumlah
+    // titik grid TIDAK PERNAH meledak apa pun kondisinya, spacing dibesarkan
+    // otomatis (adaptif) begitu proyeksi jumlah titik melebihi
+    // MAX_GRID_SAMPLES -- ini murni pengaman performa, bukan kontrol utama
+    // kepadatan visual (itu tugas getIconSpacingMetersForZoom di atas).
+    const rawCols = Math.max(1, Math.ceil((east - west) / lngStep));
+    const rawRows = Math.max(1, Math.ceil((north - south) / latStep));
+    const rawTotal = rawCols * rawRows;
+
+    if (rawTotal > MAX_GRID_SAMPLES) {
+        const scale = Math.sqrt(rawTotal / MAX_GRID_SAMPLES);
+        latStep *= scale;
+        lngStep *= scale;
+    }
 
     const points = [];
 
@@ -970,8 +1034,6 @@ function sampleGridPointsForIcons() {
     return points;
 }
 
-const MAX_RAIN_ICON_MARKERS = 120; // batas aman biar performa map tetap ringan
-
 function loadRainIconMarkers() {
     if (!heatmapPixelData) {
         // Gambar belum selesai dimuat, coba lagi sebentar lagi
@@ -980,10 +1042,22 @@ function loadRainIconMarkers() {
     }
 
     const points = sampleGridPointsForIcons();
+
+    // Acak urutan titik dulu sebelum di-cap. Tanpa ini, kalau titik yang
+    // memenuhi cap kebetulan habis duluan di satu sisi grid (misal cuma
+    // bagian kiri-atas viewport), icon yang muncul jadi menumpuk di satu
+    // area saja -- bukan tersebar mewakili beberapa area seperti yang
+    // diinginkan.
+    for (let i = points.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [points[i], points[j]] = [points[j], points[i]];
+    }
+
+    const maxMarkers = getMaxMarkersForZoom(map.getZoom() ?? ICON_ZOOM_MAX_DETAIL);
     const markers = [];
 
     for (const point of points) {
-        if (markers.length >= MAX_RAIN_ICON_MARKERS) break;
+        if (markers.length >= maxMarkers) break;
 
         const color = getPixelColorAt(point.lat, point.lng);
         const category = classifyRainIntensity(color);
@@ -993,7 +1067,7 @@ function loadRainIconMarkers() {
         markers.push({ lat: point.lat, lng: point.lng, category });
     }
 
-    console.log(`Rain icon markers: ${markers.length} dari ${points.length} titik grid`);
+    console.log(`Rain icon markers: ${markers.length} dari ${points.length} titik grid (zoom ${map.getZoom()}, cap ${maxMarkers})`);
 
     if (rainIconOverlay) {
         rainIconOverlay.setMap(null);
