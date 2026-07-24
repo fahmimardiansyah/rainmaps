@@ -105,12 +105,14 @@ legendToggle.addEventListener("click", (e) => {
         setTimeout(() => {
             fullContent.classList.remove("hidden");
             minContent.classList.add("hidden");
+            updateRelocateButtonPosition();
         }, 100);
     } else {
         legendPanel.classList.add("legend-collapsed");
         legendPanel.style.width = "60px";
         fullContent.classList.add("hidden");
         minContent.classList.remove("hidden");
+        requestAnimationFrame(updateRelocateButtonPosition);
     }
 });
 
@@ -172,6 +174,10 @@ function setVisualizationMode(mode) {
         heatmapView.classList.add("hidden");
         iconView.classList.remove("hidden");
     }
+
+    // Tinggi legend-icon-view vs legend-heatmap-view berbeda, jadi posisi
+    // tombol relocate perlu disesuaikan ulang kalau legend sedang expand.
+    requestAnimationFrame(updateRelocateButtonPosition);
 
     applyVisualizationModeToMap();
 }
@@ -788,16 +794,45 @@ function toggleRelocateButton(show) {
     if (!relocateButton) return;
 
     if (show) {
+        updateRelocateButtonPosition();
         relocateButton.classList.remove("hidden");
     } else {
         relocateButton.classList.add("hidden");
     }
 }
 
+// Posisi tombol relocate dihitung ulang dari posisi ASLI legend panel saat
+// ini (getBoundingClientRect), bukan angka tetap. Karena itu, satu formula
+// ini otomatis benar di kedua kondisi:
+// - Legend minimize (pendek)  -> top legend dekat ke ETA card -> tombol
+//   nempel tepat di atas ETA card.
+// - Legend expand (lebih tinggi, apa pun isinya: heatmap view / icon view)
+//   -> top legend naik -> tombol ikut naik ke atas legend.
+function updateRelocateButtonPosition() {
+    if (!relocateButton || !legendPanel) return;
+
+    const legendRect = legendPanel.getBoundingClientRect();
+    const gap = 20; // jarak aman antara tombol dan legend panel
+
+    const bottomOffset = Math.max(
+        16,
+        window.innerHeight - legendRect.top + gap,
+    );
+
+    relocateButton.style.bottom = `${bottomOffset}px`;
+}
+
 relocateButton.addEventListener("click", () => {
     followUser = true;
     focusOnUser(currentLocation);
     toggleRelocateButton(false);
+});
+
+// Recalculate juga saat window di-resize (misal rotate layar)
+window.addEventListener("resize", () => {
+    if (!relocateButton.classList.contains("hidden")) {
+        updateRelocateButtonPosition();
+    }
 });
 
 function zoomToUser(position) {
